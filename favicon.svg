@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="VERIFIQ logo">
+  <title>VERIFIQ</title>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#071b2e"/>
+      <stop offset="100%" stop-color="#061221"/>
+    </linearGradient>
+    <linearGradient id="teal" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#00e0b8"/>
+      <stop offset="100%" stop-color="#00a888"/>
+    </linearGradient>
+  </defs>
+  <!-- Background rounded square -->
+  <rect width="256" height="256" rx="44" ry="44" fill="url(#bg)"/>
+  <!-- Subtle grid dots (BIM/IFC reference) -->
+  <g fill="#00c4a0" opacity="0.18">
+    <circle cx="52" cy="52" r="4"/><circle cx="128" cy="52" r="4"/><circle cx="204" cy="52" r="4"/>
+    <circle cx="52" cy="128" r="4"/><circle cx="204" cy="128" r="4"/>
+    <circle cx="52" cy="204" r="4"/><circle cx="128" cy="204" r="4"/><circle cx="204" cy="204" r="4"/>
+  </g>
+  <!-- V-checkmark: main brand mark -->
+  <!-- Left arm of V -->
+  <path d="M 52 72 L 98 174 L 128 128 L 108 128 L 92 162 L 68 88 Z" fill="url(#teal)"/>
+  <!-- Right arm of V / checkmark uptick -->
+  <path d="M 128 128 L 158 72 L 182 72 L 140 152 L 128 128 Z" fill="url(#teal)" opacity="0.85"/>
+  <!-- IQ accent dot - the "intelligence" marker -->
+  <circle cx="186" cy="172" r="11" fill="#00c4a0"/>
+  <rect x="178" y="148" width="16" height="18" rx="3" fill="#00c4a0"/>
+  <!-- Bottom bar accent -->
+  <rect x="52" y="212" width="152" height="5" rx="2.5" fill="#00c4a0" opacity="0.5"/>
+</svg>

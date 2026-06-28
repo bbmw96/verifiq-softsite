@@ -1,0 +1,72 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>VERIFIQ: IFC Compliance Checker</title>
+  <link rel="stylesheet" href="css/app.css">
+  <link rel="stylesheet" href="css/softsite-shell.css">
+</head>
+<body>
+<div id="update-banner"></div>
+<div id="app">
+  <div id="page-container"></div>
+</div>
+
+<!-- Third-party libraries (offline, bundled in libs/) -->
+<script src="libs/three.min.js"></script>
+<script src="libs/web-ifc-api.js"></script>
+
+<!-- Modules (no dependencies) -->
+<script src="js/modules/state.js"></script>
+<script src="js/modules/utils.js"></script>
+<script src="js/modules/bridge.js"></script>
+<!-- VERIFIQ - SoftSite: web transport that routes the bridge to the Blazor engine -->
+<script src="js/modules/softsite-bridge.js"></script>
+
+<!-- AI engine router (no external deps, keys in localStorage) -->
+<script src="js/modules/ai-engine.js"></script>
+<!-- VERIFIQ Intelligence Config - startup knowledge, system prompt, engine matrix -->
+<script src="js/modules/verifiq-intelligence.js"></script>
+<!-- Embedded offline AI - works with zero API keys, CORENET X knowledge base -->
+<script src="js/modules/embedded-ai.js"></script>
+
+<!-- Page UI (depend on state + utils) -->
+<script src="js/ui/viewer3d.js"></script>
+<script src="js/ui/dashboard.js"></script>
+<script src="js/ui/results.js"></script>
+<script src="js/ui/attributes.js"></script>
+<script src="js/ui/cop.js"></script>
+<script src="js/ui/files.js"></script>
+<script src="js/ui/ai-assistant.js"></script>
+<script src="js/ui/parameters.js"></script>
+
+<!-- App router (depends on all pages) -->
+<script src="js/app.js"></script>
+
+<script>
+  // Initialise the VERIFIQ app after all scripts have loaded.
+  // This is the single entry point that starts the router, bridge, and tour.
+  document.addEventListener('DOMContentLoaded', function() {
+    if (window.App && typeof App.init === 'function') {
+      App.init();
+    }
+    // Install embedded offline AI as fallback when all API engines fail
+    if (window.EmbeddedAI && typeof EmbeddedAI.install === 'function') {
+      EmbeddedAI.install();
+    }
+  });
+</script>
+
+<!-- VERIFIQ - SoftSite: rebuild the desktop's native WPF navigation chrome in HTML
+     (sidebar, mode tabs, top bar, status bar, compliance score) around the ported
+     page content, wired to the same App.navigate router and VBridge actions. -->
+<script src="js/modules/softsite-shell.js"></script>
+
+<!-- VERIFIQ - SoftSite: boot the Blazor WebAssembly engine that backs the bridge.
+     Mounted to a hidden root so it never touches the desktop #app UI. -->
+<div id="blazor-root" style="display:none"></div>
+<script src="_framework/blazor.webassembly.js"></script>
+</body>
+</html>
