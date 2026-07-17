@@ -1,0 +1,66 @@
+/* VERIFIQ - SoftSite navigation shell.
+   The desktop draws its sidebar, top bar, mode tabs and status bar in native WPF
+   (MainWindow.xaml). The browser has no WPF host, so this rebuilds that exact chrome
+   in HTML around the ported page content (#page-container), wired to the same router
+   (App.navigate) and bridge actions the desktop uses. Uses the app.css theme tokens. */
+
+.vq-shell { display: flex; height: 100%; width: 100%; overflow: hidden; }
+
+/* ── Sidebar ───────────────────────────────────────────────────────────────── */
+.vq-sidebar {
+  width: 250px; min-width: 250px; background: var(--navy);
+  border-right: 1px solid var(--navy-3); display: flex; flex-direction: column; overflow: hidden;
+}
+.vq-brand { display: flex; align-items: center; gap: 10px; padding: 16px 16px 12px; }
+.vq-logo {
+  background: var(--teal); color: #00130f; font-weight: 800; border-radius: 8px;
+  width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; font-size: 14px;
+}
+.vq-brandtext { display: flex; flex-direction: column; color: var(--white); font-weight: 800; font-size: 16px; line-height: 1.08; }
+.vq-brandtext small { color: var(--mid-grey); font-weight: 500; font-size: 10px; letter-spacing: .02em; }
+
+.vq-mode { display: flex; gap: 6px; padding: 0 12px 8px; }
+.vq-modebtn {
+  flex: 1; background: var(--navy-2); color: var(--mid-grey); border: 1px solid var(--navy-3);
+  border-radius: 7px; padding: 7px 4px; font-size: 11px; font-weight: 700; cursor: pointer; transition: .12s;
+}
+.vq-modebtn:hover { border-color: var(--teal-m); color: var(--white); }
+.vq-modebtn.active { background: #fff; color: var(--navy); border-color: #fff; }
+
+.vq-nav { flex: 1; overflow-y: auto; padding: 2px 10px 10px; }
+.vq-section { color: var(--teal); font-size: 10px; font-weight: 800; letter-spacing: .09em; padding: 14px 8px 6px; }
+.vq-navbtn {
+  display: flex; align-items: center; gap: 11px; width: 100%; background: transparent; border: none;
+  color: #c7d8ea; text-align: left; padding: 9px 11px; border-radius: 8px; font-size: 13.5px;
+  cursor: pointer; margin-bottom: 2px; transition: .12s;
+}
+.vq-navbtn:hover { background: var(--navy-3); color: var(--white); }
+.vq-navbtn.active { background: var(--teal); color: #00130f; font-weight: 700; }
+.vq-ic { width: 18px; text-align: center; font-size: 14px; }
+
+.vq-score { margin: 8px 10px 12px; padding: 14px; background: var(--navy-2); border: 1px solid var(--navy-3); border-radius: 10px; text-align: center; }
+.vq-score-label { color: var(--mid-grey); font-size: 11px; margin-bottom: 4px; }
+.vq-score-val { color: var(--teal); font-size: 30px; font-weight: 800; line-height: 1; }
+.vq-score-sub { color: var(--mid-grey); font-size: 10px; margin-top: 5px; }
+
+/* ── Main area ─────────────────────────────────────────────────────────────── */
+.vq-mainwrap { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+.vq-topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 10px 18px; background: var(--navy); border-bottom: 1px solid var(--navy-3); }
+.vq-ctx { color: var(--teal); font-weight: 700; font-size: 13px; white-space: nowrap; }
+.vq-actions { display: flex; gap: 8px; }
+.vq-act { background: var(--navy-2); color: #d7e6f5; border: 1px solid var(--navy-3); border-radius: 8px; padding: 8px 14px; font-weight: 700; font-size: 12.5px; cursor: pointer; transition: .12s; }
+.vq-act:hover { border-color: var(--teal-m); color: var(--white); }
+.vq-act-teal { background: var(--teal); color: #00130f; border-color: var(--teal); }
+.vq-act-teal:hover { filter: brightness(1.07); color: #00130f; }
+
+.vq-content { flex: 1; overflow: hidden; min-height: 0; }
+.vq-content > #page-container { height: 100%; }
+
+.vq-status { display: flex; justify-content: space-between; gap: 12px; padding: 6px 16px; background: var(--navy); border-top: 1px solid var(--navy-3); color: var(--mid-grey); font-size: 11.5px; }
+.vq-status-right { color: var(--mid-grey); opacity: .8; white-space: nowrap; }
+
+@media (max-width: 880px) {
+  .vq-sidebar { width: 60px; min-width: 60px; }
+  .vq-brandtext, .vq-mode, .vq-section, .vq-navbtn span:not(.vq-ic), .vq-score { display: none; }
+  .vq-navbtn { justify-content: center; }
+}
