@@ -20,7 +20,11 @@
 
   function modelLoaded() {
     if (window.__vqIfcFiles && Object.keys(window.__vqIfcFiles).length) return true;
-    try { var s = window.State && State.get && State.get(); return !!(s && s.filesLoaded && s.filesLoaded.length); }
+    // Desktop loads via the C# host, so files live in VState.filesLoaded. state.js exposes the
+    // store as window.VState; window.State is undefined (State is a lexical const, never on window).
+    // The SoftSite browser build tracks parsed files in window.__vqIfcFiles above. Check every
+    // source so this shared module reports "model loaded" correctly in both shells.
+    try { var st = window.VState || window.State; var s = st && st.get && st.get(); return !!(s && s.filesLoaded && s.filesLoaded.length); }
     catch (e) { return false; }
   }
 
