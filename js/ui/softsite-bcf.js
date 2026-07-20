@@ -51,6 +51,12 @@
   }
 
   function pickFile() {
+    // Desktop (WebView2) has no DotNet bridge - ask the host to open a native file dialog and
+    // read the archive with BcfImporter; the result arrives via the 'bcfImported' message.
+    if (!(window.DotNet && DotNet.invokeMethodAsync)) {
+      if (window.VBridge) VBridge.send('openBcfFile', {});
+      return;
+    }
     var inp = document.createElement('input');
     inp.type = 'file';
     inp.accept = '.bcf,.bcfzip,.zip';

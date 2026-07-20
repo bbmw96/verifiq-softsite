@@ -430,6 +430,28 @@ table.results-table th:nth-child(7) { width: 70px; }
 #v-wrap table td { color: var(--muted-2); font-size: 11px; }
 #v-wrap table th { color: var(--muted);   background: #071a2e; font-size: 10px; text-transform: uppercase; }
 
+/* VERIFIQ Table Kit - resizable, auto-fitting columns (see js/modules/table-kit.js) */
+/* Base smart auto-fit: every table cell wraps long tokens so words are never lost. */
+table td { overflow-wrap: anywhere; }
+/* An enhanced table is switched to fixed layout by the kit; keep header text from spilling
+   when a column is dragged narrow, and keep cell text wrapping within the column. */
+.vq-table { will-change: width; }
+.vq-table > thead > tr > th { overflow: hidden; }
+.vq-table td { overflow-wrap: anywhere; word-break: break-word; }
+/* Drag grip on the right edge of each header cell. The 2px bar lights up teal on hover. */
+.vq-col-grip {
+  position: absolute; top: 0; right: -3px; width: 10px; height: 100%;
+  cursor: col-resize; user-select: none; -webkit-user-select: none; touch-action: none; z-index: 3;
+}
+.vq-col-grip::after {
+  content: ''; position: absolute; top: 20%; bottom: 20%; right: 4px; width: 2px;
+  background: transparent; border-radius: 1px; transition: background .12s ease;
+}
+.vq-col-grip:hover::after,
+.vq-col-grip:active::after { background: var(--teal); }
+/* While dragging, show the resize cursor everywhere and suppress text selection. */
+body.vq-col-resizing, body.vq-col-resizing * { cursor: col-resize !important; user-select: none !important; }
+
 /* ── DETAIL / INFO PANELS ─────────────────────────────────────────────────── */
 .detail-panel {
   background: var(--card-2);
