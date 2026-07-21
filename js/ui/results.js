@@ -180,7 +180,7 @@ const ResultsPage = (() => {
     </div>
     <div style="display:flex;gap:6px">
       <button class="btn btn-ghost" style="height:28px;padding:0 10px;font-size:12px" onclick="ResultsPage.togglePlatform()" id="plat-toggle">🔧 Platform</button>
-      <button class="btn btn-ghost" style="height:28px;padding:0 10px;font-size:12px" onclick="ResultsPage.toggleGrouped()" id="group-toggle">⊞ Group</button>
+      <button class="btn btn-ghost" style="height:28px;padding:0 10px;font-size:12px" onclick="ResultsPage.toggleGrouped()" id="group-toggle" title="Group findings under collapsible per-agency headers (BCA, URA, SCDF ...)">⊞ Group</button>
       <button class="btn btn-outline" style="height:28px;padding:0 10px;font-size:12px" onclick="VBridge.send('export',{})">📤 Export</button>
     </div>
   </div>
@@ -250,8 +250,14 @@ const ResultsPage = (() => {
   }
 
   function _rows(findings) {
+    if (_grouped) return _groupedRows(findings);
     _shownFindings = findings;
-    return findings.map((f, i) => {
+    return findings.map((f, i) => _rowHtml(f, i)).join('');
+  }
+
+  // Single-row template - shared by the flat list and the grouped (by-agency) view,
+  // so both render identical rows; only the group-header wrapping differs.
+  function _rowHtml(f, i) {
       const e   = getIfcEntity(f);
       const sub = getSubType(f);
       const cls = getClsCode(f);
@@ -322,7 +328,6 @@ const ResultsPage = (() => {
           </div>
         </td>
       </tr>`;
-    }).join('');
   }
 
   function _renderEmpty(isCrit) {
@@ -380,6 +385,84 @@ const ResultsPage = (() => {
     const b = document.getElementById('group-toggle');
     if (b) { b.style.background = _grouped ? 'var(--teal)' : ''; b.style.color = _grouped ? 'var(--navy)' : ''; }
     _rerender();
+  }
+
+  // Collapsed-group memory (persisted) so a QP's expand/collapse choices survive re-render.
+  var _collapsedGroups = (function () {
+    try { return new Set(JSON.parse(localStorage.getItem('vq_result_groups') || '[]')); } catch (e) { return new Set(); }
+  })();
+  function toggleGroup(enc) {
+    var key = decodeURIComponent(enc);
+    if (_collapsedGroups.has(key)) _collapsedGroups.delete(key); else _collapsedGroups.add(key);
+    try { localStorage.setItem('vq_result_groups', JSON.stringify(Array.from(_collapsedGroups))); } catch (e) { /* storage disabled */ }
+    _rerender();
+  }
+
+  // CORENET-X review is organised per agency, so grouping defaults to lead agency. Known
+  // agencies lead in gateway order; anything else (incl. no-agency) sorts after, alpha.
+  var AGENCY_ORDER = ['BCA','URA','SCDF','LTA','PUB','NEA','NParks','SLA','HDB','JTC','CIDB','JBPM'];
+  var AGENCY_FULL = {
+    BCA:'Building & Construction Authority', URA:'Urban Redevelopment Authority',
+    SCDF:'Singapore Civil Defence Force', LTA:'Land Transport Authority',
+    PUB:"PUB, Singapore's National Water Agency", NEA:'National Environment Agency',
+    NParks:'National Parks Board', SLA:'Singapore Land Authority',
+    HDB:'Housing & Development Board', JTC:'JTC Corporation',
+    CIDB:'Construction Industry Development Board (Malaysia)', JBPM:'Bomba - Fire & Rescue Department (Malaysia)'
+  };
+  var _GROUP_SEV_ORDER = { Critical:0, Error:1, Warning:2, Pass:3 };
+
+  // Render findings grouped under collapsible per-agency headers. Rebuilds _shownFindings
+  // in the exact visual order the rows are emitted, so every row action index stays valid.
+  function _groupedRows(findings) {
+    var groups = {};
+    findings.forEach(function (f) {
+      var key = (f.agency && f.agency !== 'None') ? f.agency : 'General / no lead agency';
+      (groups[key] = groups[key] || []).push(f);
+    });
+    var keys = Object.keys(groups).sort(function (a, b) {
+      var ia = AGENCY_ORDER.indexOf(a), ib = AGENCY_ORDER.indexOf(b);
+      if (ia !== -1 || ib !== -1) return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+      return a.localeCompare(b);
+    });
+    var ordered = [], html = '';
+    keys.forEach(function (key) {
+      var list = groups[key].slice().sort(function (a, b) {
+        return (_GROUP_SEV_ORDER[a.severity] == null ? 9 : _GROUP_SEV_ORDER[a.severity])
+             - (_GROUP_SEV_ORDER[b.severity] == null ? 9 : _GROUP_SEV_ORDER[b.severity]);
+      });
+      var counts = list.reduce(function (a, f) { a[f.severity] = (a[f.severity] || 0) + 1; return a; }, {});
+      var collapsed = _collapsedGroups.has(key);
+      html += _groupHeaderHtml(key, list.length, counts, collapsed);
+      if (!collapsed) {
+        list.forEach(function (f) { var i = ordered.length; ordered.push(f); html += _rowHtml(f, i); });
+      }
+    });
+    _shownFindings = ordered;
+    return html;
+  }
+
+  function _groupHeaderHtml(key, total, counts, collapsed) {
+    var known = AGENCY_ORDER.indexOf(key) !== -1;
+    var full  = AGENCY_FULL[key] || key;
+    var pills = Object.keys(counts).sort(function (a, b) {
+      return (_GROUP_SEV_ORDER[a] == null ? 9 : _GROUP_SEV_ORDER[a]) - (_GROUP_SEV_ORDER[b] == null ? 9 : _GROUP_SEV_ORDER[b]);
+    }).map(function (sv) {
+      var c = sevCfg(sv);
+      return '<span style="display:inline-block;padding:1px 7px;border-radius:100px;font-size:10px;font-weight:700;background:' + c.bg + ';border:1px solid ' + c.border + ';color:' + c.badge + '">' + VUtils.esc(sv) + ' ' + counts[sv] + '</span>';
+    }).join(' ');
+    var enc = encodeURIComponent(key);
+    return '<tr class="vq-group-hdr" onclick="ResultsPage.toggleGroup(\'' + enc + '\')" ' +
+      'title="Click to ' + (collapsed ? 'expand' : 'collapse') + ' this agency group" ' +
+      'style="cursor:pointer;background:#0c1c31;border-top:2px solid #1d3354;border-bottom:1px solid #1d3354">' +
+      '<td colspan="15" style="padding:9px 12px">' +
+        '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">' +
+          '<span style="font-size:11px;color:#5b7fa6;width:12px;text-align:center">' + (collapsed ? '▶' : '▼') + '</span>' +
+          (known ? VUtils.agencyBadge(key) + ' ' : '') +
+          '<span style="font-size:12px;color:#e2e8f0;font-weight:700">' + VUtils.esc(full) + '</span>' +
+          '<span style="background:#1a2840;border:1px solid var(--border);border-radius:100px;padding:1px 9px;font-size:11px;font-weight:700;color:var(--teal)">' + total + '</span>' +
+          '<span style="display:flex;gap:4px;flex-wrap:wrap">' + pills + '</span>' +
+        '</div>' +
+      '</td></tr>';
   }
 
   // ── FILTER CONTROLS ──────────────────────────────────────────────────────────
@@ -874,7 +957,7 @@ const ResultsPage = (() => {
     applyFilters, applySearch, clearFilters,
     applyDesignFilters, clearDesignFilters,
     af, as, cf,
-    showPlatform, togglePlatform, toggleGrouped, goto3D,
+    showPlatform, togglePlatform, toggleGrouped, toggleGroup, goto3D,
     filterBlockers,
     rowClick, openDetail, closeDetail, onElementProperties, copyText, afterRender,
     fixFinding, copFinding, toggleNA, saveView, loadView,
