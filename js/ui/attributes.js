@@ -14,6 +14,8 @@ const AttributesPage = (() => {
 
   const _loaded = {};   // guid -> last property payload (cache so re-expand is instant)
   let _byGuid = {};     // guid -> element (carries the pi/ci search indices)
+  let _dp = 'auto';     // decimal places for numeric values ('auto' = exactly as the file stores)
+  try { _dp = localStorage.getItem('vq_attr_dp') || 'auto'; } catch (e) {}
   const CARET_CLOSED = '▸';   // right-pointing small triangle
   const CARET_OPEN   = '▾';   // down-pointing small triangle
 
@@ -86,6 +88,11 @@ const AttributesPage = (() => {
         <input id="vq-attr-q2" type="text" oninput="AttributesPage.applySearch()" autocomplete="off"
           placeholder="🏷 Category / classification reference  (e.g. IfcDoor, DOOR, A-WAL-EXW, Wall)" style="${inputCss}">
         <button class="btn btn-ghost" style="height:34px;flex-shrink:0" onclick="AttributesPage.clearSearch()">Clear</button>
+        <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--mid-grey);flex-shrink:0" title="Decimal places shown for numeric values">Decimals
+          <select onchange="AttributesPage.setDecimals(this.value)" style="height:34px;padding:0 8px;font-size:12px;border:1px solid #2d4a6e;border-radius:6px;background:#0a1628;color:#e2e8f0">
+            ${['auto','0','1','2','3','4','6'].map(o => `<option value="${o}"${o === _dp ? ' selected' : ''}>${o === 'auto' ? 'Auto' : o}</option>`).join('')}
+          </select>
+        </label>
       </div>
       <div id="vq-attr-count" style="font-size:11px;color:#5b7fa6;margin:6px 0 14px">${els.length} element(s) across ${keys.length} type group(s)</div>
       <div id="vq-attr-list">${groupsHtml}</div>
@@ -160,8 +167,8 @@ const AttributesPage = (() => {
         const hasVal = pr.value !== undefined && pr.value !== null && String(pr.value) !== '';
         const valEl = _el('span',
           'font-size:11px;font-weight:600;text-align:right;word-break:break-word;flex-shrink:0;max-width:55%;color:' + (hasVal ? '#e2e8f0' : '#374151'),
-          hasVal ? String(pr.value) : '(empty)');
-        // Show the unit (mm, m2, kg, deg, ...) in a dimmer tone right after the value, so the
+          hasVal ? _fmtValue(pr.value) : '(empty)');
+        // Show the unit (mm, m², kg, deg, ...) in a dimmer tone right after the value, so the
         // reading is complete like a professional IFC viewer. Units come from the model's own
         // IfcUnitAssignment, so they match whatever that file declares.
         if (hasVal && pr.unit) valEl.appendChild(_el('span', 'color:#5b7fa6;font-weight:500;margin-left:4px', String(pr.unit)));
@@ -213,7 +220,28 @@ const AttributesPage = (() => {
     applySearch();
   }
 
-  return { render, toggle, onElementProperties, applySearch, clearSearch };
+  // Format a numeric value to the chosen decimal places. Text, enumerations and booleans are
+  // shown exactly as stored; 'auto' keeps the number exactly as the file provides it.
+  function _fmtValue(v) {
+    if (v === undefined || v === null) return '';
+    const s = String(v);
+    if (_dp === 'auto' || !/^-?\d+(\.\d+)?$/.test(s)) return s;
+    const n = parseFloat(s);
+    return isFinite(n) ? n.toFixed(parseInt(_dp, 10)) : s;
+  }
+
+  // Change how many decimal places numeric values show, persist the choice, and re-render
+  // every element that is currently expanded so the change is immediate.
+  function setDecimals(v) {
+    _dp = v || 'auto';
+    try { localStorage.setItem('vq_attr_dp', _dp); } catch (e) {}
+    Object.keys(_loaded).forEach(guid => {
+      const body = document.getElementById('vq-attr-body-' + cssId(guid));
+      if (body && body.style.display !== 'none') _renderInto(body, _loaded[guid]);
+    });
+  }
+
+  return { render, toggle, onElementProperties, applySearch, clearSearch, setDecimals };
 })();
 
 window.AttributesPage = AttributesPage;
