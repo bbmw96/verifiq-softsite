@@ -158,9 +158,14 @@ const AttributesPage = (() => {
           left.appendChild(_el('span', 'font-size:9px;color:#5b7fa6;letter-spacing:.3px', pr.type));
         row.appendChild(left);
         const hasVal = pr.value !== undefined && pr.value !== null && String(pr.value) !== '';
-        row.appendChild(_el('span',
+        const valEl = _el('span',
           'font-size:11px;font-weight:600;text-align:right;word-break:break-word;flex-shrink:0;max-width:55%;color:' + (hasVal ? '#e2e8f0' : '#374151'),
-          hasVal ? String(pr.value) : '(empty)'));
+          hasVal ? String(pr.value) : '(empty)');
+        // Show the unit (mm, m2, kg, deg, ...) in a dimmer tone right after the value, so the
+        // reading is complete like a professional IFC viewer. Units come from the model's own
+        // IfcUnitAssignment, so they match whatever that file declares.
+        if (hasVal && pr.unit) valEl.appendChild(_el('span', 'color:#5b7fa6;font-weight:500;margin-left:4px', String(pr.unit)));
+        row.appendChild(valEl);
         box.appendChild(row);
       });
       host.appendChild(box);

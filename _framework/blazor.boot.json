@@ -1,7 +1,7 @@
 {
   "mainAssemblyName": "VERIFIQ.SoftSite",
   "resources": {
-    "hash": "sha256-OttO5a1+M/wStbJPh1S/BGFbiEHhhNU3fk3D72jgk3A=",
+    "hash": "sha256-eBFr7+RDl3e8SU3dzOJjXFBX4+0LM8tYoGwr96clYII=",
     "jsModuleNative": {
       "dotnet.native.js": "sha256-sn/g61GjVPhViOYQDkq1OMlk0eyS9r2Hi0qgU2o0HIU="
     },
@@ -229,10 +229,10 @@
       "UglyToad.PdfPig.Tokens.wasm": "sha256-yMrRoFUZJ24fvPVKpSrtU2Esx8X+zfMvcTikeS+zscY=",
       "UglyToad.PdfPig.wasm": "sha256-By1LNZhWCyC5x0HsJ+kJXw5bqzNbQrhCOtIQZ7MEOEU=",
       "VERIFIQ.Core.wasm": "sha256-m2hqyQM9Vp4KexIpW5ywx0EcXFV44qWAlZwwX5ij7eY=",
-      "VERIFIQ.Parser.wasm": "sha256-LtwU/FJwIxHiwT+AEvLowHn83/tgF7ZLZxIbx1wvZ6A=",
+      "VERIFIQ.Parser.wasm": "sha256-2pTL8hBE868wjjz0n8gHuZUvkeUjq5ttBolt5SfVxJw=",
       "VERIFIQ.Reports.wasm": "sha256-LbhXeuZHBw7lzfjuxk4meayJmGrPx6U83pT3zUHOIQs=",
       "VERIFIQ.Rules.wasm": "sha256-zijlyAuFTHv9518O8nwenDN8hiyno3sEx8JYlDUB4FU=",
-      "VERIFIQ.SoftSite.wasm": "sha256-XnFiWA4eT5So5GBLFrJXPt9FbT3b6lb/oTQIGNuBWco=",
+      "VERIFIQ.SoftSite.wasm": "sha256-bWbUSwYMIeVH4oEFCX0qCJfxu9uRT0n4TSuwgU/RuL0=",
       "WindowsBase.wasm": "sha256-/H6jQzjHMQymGpjlB2UYq5VDHulZDyKlf9c0koyrQ/8=",
       "XLParser.wasm": "sha256-y9+iO5oW0od7XYaYhNN0cqGSKMAoLRD+xcX4uzqpF0U=",
       "mscorlib.wasm": "sha256-YI5F+NHcYCSuCGvvp5vyTL2orAoMlXo4ep5foTyMfeg=",
