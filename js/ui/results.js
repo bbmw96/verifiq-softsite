@@ -329,7 +329,7 @@ const ResultsPage = (() => {
     return `<div style="padding:16px">
       <h1>${isCrit?'Critical Issues':'All Compliance Findings'}</h1>
       <p style="color:var(--mid-grey);font-size:13px;margin-bottom:16px">
-        ${isCrit?'Critical and Error findings causing CORENET-X or NBeS submission rejection.':'All findings across 20 IFC data levels, 206 classification codes (COP3.1), 192 SG rules, 52 MY rules.'}
+        ${isCrit?'Critical and Error findings causing CORENET-X or NBeS submission rejection.':'All findings across 20 IFC data levels, checked by IFC entity and PredefinedType against the official IFC+SG Industry Mapping - CORENET-X COP 3.1 Edition, December 2025 (42 IFC entities, 833 property requirements) - plus the Singapore and Malaysia design codes.'}
       </p>
       ${VUtils.emptyState('📋','No results yet','Run validation on a loaded IFC file.',
         '<button class="btn btn-primary" style="margin-top:16px" onclick="VBridge.openFile()">📂 Open IFC File</button>')}

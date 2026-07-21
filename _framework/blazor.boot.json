@@ -1,7 +1,7 @@
 {
   "mainAssemblyName": "VERIFIQ.SoftSite",
   "resources": {
-    "hash": "sha256-RabJSqHJiCImffeghB5/NaXpkewlSKyxG40f+nhqJuI=",
+    "hash": "sha256-qAQ/3cozHxuVLLFDnx8Z1952YlqmrDRZ2nIClwHjjy0=",
     "jsModuleNative": {
       "dotnet.native.js": "sha256-sn/g61GjVPhViOYQDkq1OMlk0eyS9r2Hi0qgU2o0HIU="
     },
@@ -231,7 +231,7 @@
       "VERIFIQ.Core.wasm": "sha256-m2hqyQM9Vp4KexIpW5ywx0EcXFV44qWAlZwwX5ij7eY=",
       "VERIFIQ.Parser.wasm": "sha256-C2h/kHNEJdNL/S6cl6tjkJtGljezpZ8p1FpmMhmiE8Y=",
       "VERIFIQ.Reports.wasm": "sha256-hvBkU3X+/5eCOhy0Kpb1MiBrfd9YM5+y5W6rCxBVbOw=",
-      "VERIFIQ.Rules.wasm": "sha256-Wqic7zdJAf5pl2QkTdgSoxnMSgNVESJjXxMsUhW8i20=",
+      "VERIFIQ.Rules.wasm": "sha256-5bcExuXHZ9juvjE+pXHuQkV3q6K+cFnHpbhsK5yRMO0=",
       "VERIFIQ.SoftSite.wasm": "sha256-3o7sTOUrDksT8e6RjOCeDuZlzIPwG8J59qR92Xy/cOw=",
       "WindowsBase.wasm": "sha256-/H6jQzjHMQymGpjlB2UYq5VDHulZDyKlf9c0koyrQ/8=",
       "XLParser.wasm": "sha256-y9+iO5oW0od7XYaYhNN0cqGSKMAoLRD+xcX4uzqpF0U=",
