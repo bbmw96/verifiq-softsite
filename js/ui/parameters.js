@@ -123,22 +123,26 @@ const ParametersPage = (() => {
     fetch('data/corenetx-lookup.json')
       .then(r => r.ok ? r.json() : Promise.reject(r.status))
       .then(db => {
-        const m = {};
-        Object.values(db.categories || {}).forEach(arr => (arr || []).forEach(p => {
-          const k = ((p.propertySet || '') + '|' + (p.parameter || '')).toLowerCase();
-          if (!m[k]) m[k] = {
-            software:    p.software || {},
-            example:     p.example || '',
-            description: p.description || '',
-            subType:     p.ifcSubType || '',
-            materialSet: p.materialSet || ''
-          };
+        // The BIM-software mapping is per-COMPONENT, so a bare pset+param key can be
+        // ambiguous (the same parameter maps differently under different components).
+        // spec = component-qualified keys (always correct); loose = pset|param but only
+        // kept when the software is identical across every component that uses it.
+        const spec = {}, loose = {}, sig = {};
+        const det = p => ({ software: p.software || {}, example: p.example || '',
+                            description: p.description || '', materialSet: p.materialSet || '' });
+        Object.entries(db.categories || {}).forEach(([comp, arr]) => (arr || []).forEach(p => {
+          const c = (comp || '').toLowerCase(), ps = (p.propertySet || '').toLowerCase(), pr = (p.parameter || '').toLowerCase();
+          const d = det(p);
+          spec[c + '|' + ps + '|' + pr] = d;
+          if (!spec[c + '|' + pr]) spec[c + '|' + pr] = d;
+          const k = ps + '|' + pr, s = JSON.stringify(d.software);
+          if (!(k in sig)) { sig[k] = s; loose[k] = d; }
+          else if (sig[k] !== s) { delete loose[k]; sig[k] = '__ambiguous__'; }
         }));
-        _enrich = m;
-        // Re-render if the user is still on this page so the new data appears.
+        _enrich = { spec, loose };
         try { if (window.VState && VState.get().currentPage === 'parameters') App.navigate('parameters'); } catch (e) {}
       })
-      .catch(() => { _enrich = {}; });
+      .catch(() => { _enrich = { spec: {}, loose: {} }; });
   }
 
   function _rowKey(r) { return (r.component + '|' + r.pset + '|' + r.param + '|' + r.agency).toLowerCase(); }
@@ -199,9 +203,11 @@ const ParametersPage = (() => {
     });
 
     // Join the authoritative sample value, description and BIM-software mappings.
+    // Prefer a component-qualified match; only use the bare pset|param when unambiguous.
     if (_enrich) {
       rows.forEach(r => {
-        const e = _enrich[((r.pset || '') + '|' + (r.param || '')).toLowerCase()];
+        const c = (r.component || '').toLowerCase(), ps = (r.pset || '').toLowerCase(), pr = (r.param || '').toLowerCase();
+        const e = _enrich.spec[c + '|' + ps + '|' + pr] || _enrich.spec[c + '|' + pr] || _enrich.loose[ps + '|' + pr];
         if (e) { r.software = e.software; r.example = e.example; r.description = e.description; r.materialSet = e.materialSet; }
       });
     }
