@@ -108,6 +108,47 @@ const ParametersPage = (() => {
     { sqm:     0, date: 'Voluntary', label: 'All other developments' },
   ];
 
+  // ---- Enrichment from the authoritative Industry Mapping (COP 3.1, Dec 2025) --
+  // Adds per-parameter Sample value, human-readable description, and the four BIM
+  // software mappings (Revit / ArchiCAD / Tekla / Bentley OpenBuildings) that the
+  // official CORENET-X Excel carries. Loaded once from a static asset and joined
+  // onto each row by PropertySet + Parameter.
+  let _enrich = null;          // { "pset|param": {software, example, description, subType, materialSet} }
+  let _enrichLoading = false;
+  const _expanded = new Set(); // keys of rows whose software/detail panel is open
+
+  function _loadEnrich() {
+    if (_enrich || _enrichLoading) return;
+    _enrichLoading = true;
+    fetch('data/corenetx-lookup.json')
+      .then(r => r.ok ? r.json() : Promise.reject(r.status))
+      .then(db => {
+        const m = {};
+        Object.values(db.categories || {}).forEach(arr => (arr || []).forEach(p => {
+          const k = ((p.propertySet || '') + '|' + (p.parameter || '')).toLowerCase();
+          if (!m[k]) m[k] = {
+            software:    p.software || {},
+            example:     p.example || '',
+            description: p.description || '',
+            subType:     p.ifcSubType || '',
+            materialSet: p.materialSet || ''
+          };
+        }));
+        _enrich = m;
+        // Re-render if the user is still on this page so the new data appears.
+        try { if (window.VState && VState.get().currentPage === 'parameters') App.navigate('parameters'); } catch (e) {}
+      })
+      .catch(() => { _enrich = {}; });
+  }
+
+  function _rowKey(r) { return (r.component + '|' + r.pset + '|' + r.param + '|' + r.agency).toLowerCase(); }
+
+  function _toggleRow(enc) {
+    const key = decodeURIComponent(enc);
+    if (_expanded.has(key)) _expanded.delete(key); else _expanded.add(key);
+    App.navigate('parameters');
+  }
+
   // ---- Flatten all parameters from EmbeddedAI.COMPONENTS --------------------
   function _buildRows() {
     const comps = (window.EmbeddedAI && window.EmbeddedAI.COMPONENTS) ? window.EmbeddedAI.COMPONENTS : {};
@@ -157,6 +198,13 @@ const ParametersPage = (() => {
       });
     });
 
+    // Join the authoritative sample value, description and BIM-software mappings.
+    if (_enrich) {
+      rows.forEach(r => {
+        const e = _enrich[((r.pset || '') + '|' + (r.param || '')).toLowerCase()];
+        if (e) { r.software = e.software; r.example = e.example; r.description = e.description; r.materialSet = e.materialSet; }
+      });
+    }
     return rows;
   }
 
@@ -235,17 +283,38 @@ const ParametersPage = (() => {
       const reqHtml = r.mandatory
         ? '<span style="color:#22c55e;font-weight:700;font-size:10px">M</span>'
         : '<span style="color:#94a3b8;font-size:10px">O</span>';
-      return '<tr>'
-        + '<td style="font-weight:600;white-space:nowrap">' + _esc(r.component) + '</td>'
+      const sw = r.software || {};
+      const hasDetail = (r.description && r.description !== r.param) || r.example
+        || sw.revit || sw.archicad || sw.tekla || sw.bentley;
+      const key  = _rowKey(r);
+      const open = _expanded.has(key);
+      const chev = hasDetail ? '<span style="color:#5b7fa6;font-size:9px;margin-right:4px">' + (open ? '▾' : '▸') + '</span>' : '';
+      const exHint = r.example ? '<div style="font-size:9px;color:#d97706;margin-top:2px">e.g. ' + _esc(r.example) + '</div>' : '';
+      let html = '<tr' + (hasDetail ? ' style="cursor:pointer" onclick="ParametersPage._toggleRow(\'' + encodeURIComponent(key) + '\')"' : '') + '>'
+        + '<td style="font-weight:600;white-space:nowrap">' + chev + _esc(r.component) + '</td>'
         + '<td style="font-family:monospace;color:var(--teal);font-size:10px;white-space:nowrap">' + _esc(r.entity) + '</td>'
         + '<td style="font-family:monospace;color:#a78bfa;font-size:10px;white-space:nowrap">' + _esc(r.pset) + '</td>'
         + '<td style="font-weight:600;color:var(--white);white-space:nowrap">' + _esc(r.param) + '</td>'
         + '<td style="color:var(--mid-grey);white-space:nowrap">' + _esc(r.type) + '</td>'
-        + '<td style="max-width:220px;color:var(--mid-grey);font-size:10px;word-break:break-word">' + _esc(valTxt) + '</td>'
+        + '<td style="max-width:220px;color:var(--mid-grey);font-size:10px;word-break:break-word">' + _esc(valTxt) + exHint + '</td>'
         + '<td>' + _agencyBadge(r.agency) + '</td>'
         + '<td>' + r.gateways.map(_gwBadge).join(' ') + '</td>'
         + '<td>' + reqHtml + '</td>'
         + '</tr>';
+      if (open) {
+        const swRow = [['Revit', sw.revit], ['ArchiCAD', sw.archicad], ['Tekla', sw.tekla], ['Bentley OpenBuildings', sw.bentley]]
+          .filter(x => x[1])
+          .map(x => '<span style="display:inline-block;margin:2px 10px 2px 0"><span style="color:#5b7fa6;font-size:9px">' + x[0]
+            + ':</span> <span style="color:#cbd5e1;font-size:10px;font-family:monospace">' + _esc(x[1]) + '</span></span>')
+          .join('');
+        html += '<tr><td colspan="9" style="background:#06111f;padding:9px 14px;border-bottom:2px solid #162843">'
+          + (r.description && r.description !== r.param ? '<div style="font-size:11px;color:#cbd5e1;margin-bottom:5px"><b style="color:#8aaac8">Description:</b> ' + _esc(r.description) + '</div>' : '')
+          + (r.example ? '<div style="font-size:11px;color:#cbd5e1;margin-bottom:5px"><b style="color:#8aaac8">Sample value:</b> <span style="color:#d97706;font-family:monospace">' + _esc(r.example) + '</span></div>' : '')
+          + (swRow ? '<div style="font-size:11px"><b style="color:#8aaac8">Where to set it (BIM software):</b><br>' + swRow + '</div>' : '')
+          + (r.materialSet && r.materialSet !== 'N.A' ? '<div style="font-size:10px;color:#64748b;margin-top:4px">Material set: ' + _esc(r.materialSet) + '</div>' : '')
+          + '</td></tr>';
+      }
+      return html;
     }).join('');
 
     return '<div class="table-wrap" style="overflow-x:auto">'
@@ -401,6 +470,7 @@ const ParametersPage = (() => {
 
   // ---- Main render -----------------------------------------------------------
   function render() {
+    _loadEnrich();                 // fetch authoritative sample/software data once
     const rows     = _buildRows();
     const filtered = _filter(rows);
 
@@ -426,7 +496,7 @@ const ParametersPage = (() => {
     return '<div>'
       + '<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px">'
       + '<div><h1 style="margin:0">Parameter Lookup</h1>'
-      + '<p style="font-size:12px;color:var(--mid-grey);margin-top:3px">IFC+SG parameter database - 833+ property mappings across 81 components, 10 agencies, and 4 submission gateways. Filter by discipline, agency, or gateway. Use the calculation tools to check GFA mandate thresholds, count parameters per agency, estimate compliance, or export a filtered CSV.</p></div>'
+      + '<p style="font-size:12px;color:var(--mid-grey);margin-top:3px">IFC+SG parameter database - 833+ property mappings across 81 components, 10 agencies, and 4 submission gateways, from the authoritative Industry Mapping (CORENET-X COP 3.1, December 2025). Filter by discipline, agency, or gateway. <b style="color:#8aaac8">Click any parameter</b> to see its sample value and exactly where to set it in Revit, ArchiCAD, Tekla and Bentley OpenBuildings. Use the calculation tools to check GFA mandate thresholds, count parameters per agency, estimate compliance, or export a filtered CSV.</p></div>'
       + '<button class="btn btn-ghost" style="font-size:11px" onclick="App.navigate(\'rules\')">Rules Database</button>'
       + '</div>'
 
@@ -552,7 +622,7 @@ const ParametersPage = (() => {
     render,
     _pg, _search, _toggleDisc, _toggleAgency, _toggleGateway,
     _setMandatory, _calcTab, _gfaInput, _clearFilters,
-    _exportCsv, _exportCsvAll,
+    _exportCsv, _exportCsvAll, _toggleRow,
   };
 })();
 
