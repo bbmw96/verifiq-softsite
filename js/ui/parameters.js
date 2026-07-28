@@ -113,9 +113,11 @@ const ParametersPage = (() => {
   // software mappings (Revit / ArchiCAD / Tekla / Bentley OpenBuildings) that the
   // official CORENET-X Excel carries. Loaded once from a static asset and joined
   // onto each row by PropertySet + Parameter.
-  let _enrich = null;          // { "pset|param": {software, example, description, subType, materialSet} }
+  let _enrich = null;          // { spec:{...}, loose:{...} } software/sample/description
+  let _spaceValues = null;     // { OccupancyType:[...], SpaceName:[...], AGF_*:[...] }
   let _enrichLoading = false;
   const _expanded = new Set(); // keys of rows whose software/detail panel is open
+  let _view = 'params';        // 'params' | 'space'  (Parameters vs Space Values browser)
 
   function _loadEnrich() {
     if (_enrich || _enrichLoading) return;
@@ -140,6 +142,7 @@ const ParametersPage = (() => {
           else if (sig[k] !== s) { delete loose[k]; sig[k] = '__ambiguous__'; }
         }));
         _enrich = { spec, loose };
+        _spaceValues = db.spaceValues || {};
         try { if (window.VState && VState.get().currentPage === 'parameters') App.navigate('parameters'); } catch (e) {}
       })
       .catch(() => { _enrich = { spec: {}, loose: {} }; });
@@ -214,21 +217,59 @@ const ParametersPage = (() => {
     return rows;
   }
 
+  // ---- Smart search: normalisation, BIM synonyms, typo tolerance -------------
+  // Matches the way engineers actually type: ignores spaces/underscores/hyphens
+  // ("u value" == "UValue" == "u-value"), understands BIM shorthand, and tolerates
+  // a one-character typo. Also searches the enriched description, sample and
+  // software-mapping fields.
+  function _norm(s) { return (s || '').toLowerCase().replace(/[^a-z0-9]/g, ''); }
+  const SEARCH_SYN = {
+    uvalue: 'thermaltransmittance', ettv: 'thermaltransmittance', ottv: 'thermaltransmittance', retv: 'thermaltransmittance',
+    firerating: 'fireresistance', frr: 'fireresistance', fireresistanceperiod: 'fireresistance',
+    handicap: 'accessible', wheelchair: 'accessible', barrierfree: 'accessible', disabled: 'accessible', oku: 'accessible',
+    aircon: 'acmv', hvac: 'acmv', airconditioning: 'acmv',
+    rebar: 'reinforcement', reo: 'reinforcement',
+    wc: 'watercloset', gfa: 'grossfloorarea', ettvvalue: 'thermaltransmittance',
+    stair: 'staircase', precast: 'precastconcrete'
+  };
+  function _editDist1(a, b) {
+    if (a === b) return true;
+    const la = a.length, lb = b.length;
+    if (Math.abs(la - lb) > 1) return false;
+    let i = 0, j = 0, edits = 0;
+    while (i < la && j < lb) {
+      if (a[i] === b[j]) { i++; j++; continue; }
+      if (++edits > 1) return false;
+      if (la > lb) i++; else if (lb > la) j++; else { i++; j++; }
+    }
+    return (edits + (la - i) + (lb - j)) <= 1;
+  }
+  function _smartMatch(r, rawQ) {
+    if (!rawQ) return true;
+    const swVals = r.software ? Object.values(r.software).join(' ') : '';
+    const hayRaw = [r.component, r.param, r.pset, r.entity, r.agency, r.values, r.description, r.example, swVals].join(' ');
+    const hay = _norm(hayRaw);
+    const q = _norm(rawQ);
+    if (!q) return true;
+    if (hay.indexOf(q) >= 0) return true;
+    for (const k in SEARCH_SYN) { if (q.indexOf(k) >= 0 && hay.indexOf(SEARCH_SYN[k]) >= 0) return true; }
+    if (SEARCH_SYN[q] && hay.indexOf(SEARCH_SYN[q]) >= 0) return true;
+    if (q.length >= 4) {
+      const toks = hayRaw.toLowerCase().split(/[^a-z0-9]+/);
+      for (const t of toks) { if (t.length >= 3 && _editDist1(q, t)) return true; }
+    }
+    return false;
+  }
+
   // ---- Filter ----------------------------------------------------------------
   function _filter(rows) {
-    const q   = _s.search.toLowerCase().trim();
     const dsc = _s.disciplines;
     const agc = _s.agencies;
     const gws = _s.gateways;
     const man = _s.mandatory;
 
     return rows.filter(r => {
-      if (q && !r.component.toLowerCase().includes(q)
-             && !r.param.toLowerCase().includes(q)
-             && !r.pset.toLowerCase().includes(q)
-             && !r.entity.toLowerCase().includes(q)
-             && !r.agency.toLowerCase().includes(q)
-             && !r.values.toLowerCase().includes(q)) return false;
+      if (_s.search && !_smartMatch(r, _s.search)) return false;
 
       if (dsc.size > 0 && !r.disciplines.some(d => dsc.has(d))) return false;
       if (agc.size > 0 && !agc.has(r.agency)) return false;
@@ -474,6 +515,34 @@ const ParametersPage = (() => {
     return '<div class="card" style="margin-bottom:16px"><div class="card-header"><span class="card-title">Calculation Tools</span></div>' + tabBar + body + '</div>';
   }
 
+  function _setView(v) { _view = v; _s.page = 0; App.navigate('parameters'); }
+
+  // ---- Space Values browser (CORENET-X space-level enumerations) -------------
+  function _renderSpaceValues() {
+    const searchBox = '<div class="card" style="margin-bottom:12px;padding:10px 12px">'
+      + '<input type="text" id="param-search" placeholder="Search space values - e.g. hospital, office, sky terrace, residential..." value="' + _esc(_s.search) + '" oninput="ParametersPage._search(this.value)" style="width:100%;background:var(--navy);border:1px solid var(--border);color:var(--white);padding:8px 12px;border-radius:6px;font-size:13px;font-family:inherit;box-sizing:border-box">'
+      + '<div style="font-size:11px;color:var(--mid-grey);line-height:1.6;margin-top:8px"><b style="color:#8aaac8">Space Values</b> are the enumerated values CORENET-X accepts for the space-level properties (occupancy type, space name, GFA development use, landscape type, area type, and more), set on IfcSpace property sets. Source: authoritative Industry Mapping (CORENET-X COP 3.1, December 2025).</div></div>';
+
+    if (!_spaceValues) return searchBox + '<div class="card" style="padding:24px;text-align:center;color:var(--mid-grey)">Loading space-values database...</div>';
+
+    const q = _norm(_s.search);
+    const cards = Object.keys(_spaceValues).map(function (prop) {
+      const vals = _spaceValues[prop] || [];
+      const propMatch = !q || _norm(prop).indexOf(q) >= 0;
+      const shown = (!q || propMatch) ? vals : vals.filter(function (v) { return _norm(v).indexOf(q) >= 0; });
+      if (q && !propMatch && shown.length === 0) return '';
+      const chips = shown.map(function (v) {
+        return '<span style="display:inline-block;background:#0e1f33;border:1px solid #1d3354;border-radius:5px;padding:3px 9px;margin:3px 3px 0 0;font-size:11px;color:#cbd5e1">' + _esc(v) + '</span>';
+      }).join('');
+      return '<div class="card" style="margin-bottom:12px"><div class="card-header">'
+        + '<span class="card-title" style="font-family:monospace;color:#a78bfa;font-size:13px">' + _esc(prop) + '</span>'
+        + '<span style="font-size:10px;color:var(--mid-grey)">' + shown.length + (q && shown.length !== vals.length ? ' / ' + vals.length : '') + ' value' + (vals.length !== 1 ? 's' : '') + '</span></div>'
+        + '<div style="padding:2px 12px 10px">' + (chips || '<span style="color:var(--mid-grey);font-size:11px">no matching values</span>') + '</div></div>';
+    }).filter(Boolean).join('');
+
+    return searchBox + (cards || '<div class="card" style="padding:24px;text-align:center;color:var(--mid-grey)">No space values match "' + _esc(_s.search) + '"</div>');
+  }
+
   // ---- Main render -----------------------------------------------------------
   function render() {
     _loadEnrich();                 // fetch authoritative sample/software data once
@@ -499,12 +568,26 @@ const ParametersPage = (() => {
       { id:'optional',  label:'Optional only',  color:'#94a3b8' },
     ].map(m => _chip(m.label, m.color, _s.mandatory === m.id, "ParametersPage._setMandatory('" + m.id + "')")).join('');
 
-    return '<div>'
-      + '<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px">'
+    const header = '<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:10px">'
       + '<div><h1 style="margin:0">Parameter Lookup</h1>'
       + '<p style="font-size:12px;color:var(--mid-grey);margin-top:3px">IFC+SG parameter database - 833+ property mappings across 81 components, 10 agencies, and 4 submission gateways, from the authoritative Industry Mapping (CORENET-X COP 3.1, December 2025). Filter by discipline, agency, or gateway. <b style="color:#8aaac8">Click any parameter</b> to see its sample value and exactly where to set it in Revit, ArchiCAD, Tekla and Bentley OpenBuildings. Use the calculation tools to check GFA mandate thresholds, count parameters per agency, estimate compliance, or export a filtered CSV.</p></div>'
       + '<button class="btn btn-ghost" style="font-size:11px" onclick="App.navigate(\'rules\')">Rules Database</button>'
-      + '</div>'
+      + '</div>';
+    const viewToggle = '<div style="display:inline-flex;gap:4px;background:#0a1628;border:1px solid var(--border);border-radius:7px;padding:3px;margin-bottom:14px">'
+      + ['params', 'space'].map(function (v) {
+          var on = _view === v;
+          var label = v === 'params' ? 'Parameters (' + rows.length.toLocaleString() + ')'
+                    : 'Space Values' + (_spaceValues ? ' (' + Object.values(_spaceValues).reduce(function (a, x) { return a + x.length; }, 0).toLocaleString() + ')' : '');
+          return '<button onclick="ParametersPage._setView(\'' + v + '\')" style="border:none;border-radius:5px;padding:6px 16px;font-size:12px;font-weight:600;cursor:pointer;background:'
+            + (on ? 'var(--teal)' : 'transparent') + ';color:' + (on ? 'var(--navy)' : 'var(--mid-grey)') + '">' + label + '</button>';
+        }).join('')
+      + '</div>';
+
+    if (_view === 'space') return '<div>' + header + viewToggle + _renderSpaceValues() + '</div>';
+
+    return '<div>'
+      + header
+      + viewToggle
 
       // Filters card
       + '<div class="card" style="margin-bottom:14px">'
@@ -628,7 +711,7 @@ const ParametersPage = (() => {
     render,
     _pg, _search, _toggleDisc, _toggleAgency, _toggleGateway,
     _setMandatory, _calcTab, _gfaInput, _clearFilters,
-    _exportCsv, _exportCsvAll, _toggleRow,
+    _exportCsv, _exportCsvAll, _toggleRow, _setView,
   };
 })();
 
