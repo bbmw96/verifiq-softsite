@@ -223,14 +223,14 @@ const ParametersPage = (() => {
   // a one-character typo. Also searches the enriched description, sample and
   // software-mapping fields.
   function _norm(s) { return (s || '').toLowerCase().replace(/[^a-z0-9]/g, ''); }
+  // shorthand -> a term that actually appears in the mapping data
   const SEARCH_SYN = {
     uvalue: 'thermaltransmittance', ettv: 'thermaltransmittance', ottv: 'thermaltransmittance', retv: 'thermaltransmittance',
-    firerating: 'fireresistance', frr: 'fireresistance', fireresistanceperiod: 'fireresistance',
-    handicap: 'accessible', wheelchair: 'accessible', barrierfree: 'accessible', disabled: 'accessible', oku: 'accessible',
-    aircon: 'acmv', hvac: 'acmv', airconditioning: 'acmv',
-    rebar: 'reinforcement', reo: 'reinforcement',
-    wc: 'watercloset', gfa: 'grossfloorarea', ettvvalue: 'thermaltransmittance',
-    stair: 'staircase', precast: 'precastconcrete'
+    frr: 'firerating', fireresistance: 'firerating', fireresistanceperiod: 'firerating', firerated: 'firerating',
+    handicap: 'barrierfree', wheelchair: 'barrierfree', disabled: 'barrierfree', oku: 'barrierfree', accessible: 'barrierfree', accessibility: 'barrierfree',
+    aircon: 'ventilation', hvac: 'ventilation', acmv: 'ventilation', airconditioning: 'ventilation',
+    rebar: 'reinforcement', reo: 'reinforcement', reinf: 'reinforcement',
+    gfa: 'grossfloorarea', stair: 'staircase', precast: 'precastconcrete', dia: 'diameter'
   };
   function _editDist1(a, b) {
     if (a === b) return true;
